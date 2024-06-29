@@ -1,0 +1,73 @@
+# This is a workflow for Voltron Project  with Actions
+name: Dev CI/CD Workflow
+
+# Controls when the workflow will run
+on:
+# Allows you to run this workflow manually from the Actions tab
+  #workflow_dispatch:
+ 
+# Triggers the workflow on push or pull request events but only for the "main" branch
+#  on :
+     pull_request 
+      types:[closed]
+#      branches:
+#      - featurebranch/*
+#      - developmentbranch
+#      - main
+
+
+# A workflow run is made up of one or more jobs that can run sequentially 
+jobs:
+    check-merge:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'feature/')
+# This workflow contains a single job called "build"
+  build:
+# The type of runner that the job will run on
+    runs-on: ubuntu-latest
+# Steps represent a sequence of tasks that will be executed as part of the job
+    steps:	
+# Git Checks-out our repository
+      - uses: actions/checkout@v3
+      - name: install-aws-cli
+        uses: unfor19/install-aws-cli-action@v1
+        with:
+          version: 2
+
+# Install the python 
+
+      - name: Set up python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+      
+# Install the Databricks on cli 
+
+      - name: Install Databricks CLI
+        run: pip install databricks-cli
+
+#- name: Authenticate with Databricks
+        #shell: bash
+        #env:
+          #DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          #DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+          #REPO_PATH: /Workspace/ci_cd_testing
+          #BRANCH: developmentbranch     
+        #run: |
+#databricks repos update $REPO_PATH --branch $BRANCH
+          #databricks repos list
+          #aws s3 ls
+#databricks repos update --repo-id 3466760359178955 --branch main --debug
+      - name: Upload Notebook to Databricks Workspace
+        shell: bash
+        env:
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST_DEV }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          databricks workspace import_dir voltron /voltron -o
+
+# configure the Microsoft Teams notification
+      - name: sending the TEAMS notification for Voltron Team
+        uses: skitionek/notify-microsoft-teams@master
+        if: always()
+        with:
+          webhook_url: ${{ secrets.TEAMS_ALERT_WEBHOOK }}
